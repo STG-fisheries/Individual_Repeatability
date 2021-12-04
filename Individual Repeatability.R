@@ -8,9 +8,39 @@
 ##=################################################=##
 
 
-# Intraclass Correlation Coefficient (Sokal and Rohlf, 1981)
-# Ind. Repeatability (R) = proportion of observed variance that results from 
-#    among-individual differences.
+# Individual Repeatability (R): proportion of observed variance that results from 
+# among-individual differences. This is analogous to finding the intraclass correlation 
+# coefficient as defined by Sokal and Rohlf, 1981.
+
+# Total Sum of Squares (TSS) = how much variation there is in the dependent variable
+# Between/Among-group Sum of Squares (SS_a) = variation in each mean to the grand mean 
+#         (i.e., variation due to group level differences).
+# Within-group Sum of Squares (SS_w) = variation due to individual differences
+
+# +
+# =========== EXAMPLE =========== #
+# In sampling for alewife, we notice that a subset contain (Cymothoa exigua, 
+#    i.e., tongue-eating parasitic isopod). Being a curious ecologist, we ask the 
+#    question, is there a difference in the average length of isopods collected? 
+#    Better yet, is there more variation in isopod length between/among host than
+#    the amount of variation that would be expected within host.
+#
+#    What would it mean if isopod size variation was larger between host fish than 
+#    within host fish?
+#
+#    Error term:    within-group variation... effect of isopod on host = genetic,
+#                   potentially environmental.
+#    Between/Among: significant difference in isopod length... individuals within
+#                   a host fish more similar to individuals between host.
+#    
+# To better understand this question... we need to understand the difference in 
+# variation among individuals vs. variation within individuals (i.e. magnitude of 
+# variation that exist and in what direction).
+#
+# We are not interested in individual or group level means as in tradition ANOVA.
+# We are interested in comparing variability 
+# =============================== #
+# -
 
 # Gaussian Data
 # Difference between correlation-based, ANOVA-based, and LMM-based, and negative 
@@ -19,21 +49,38 @@
 # Non-Gaussian Data
 
 
-# Total Sum of Squares (TSS) = how much variation there is in the dependent variable
-# Among-group Sum of Squares (SS_a) = variation in each mean to the grand mean
-# Within-group Sum of Squares (SS_w) = variation due to individual differences
+# +
+# === Code Starts Here === ## 
 
 rm(list = ls(all.names = TRUE))              # Clear all objects from R
 
 getwd()
-#"C:/Users/Spencer Gardner/OneDrive/Documents/FNR647 - Quantitative methods for ecologists/QuantMethods_R_script/FNR647"
-
 
 ## === Install.packages ===
 library(tidyverse)
 library(ggplot2)
 library(lme4)                 # linear mixed effects models
 library(psych)                # describeBy table toolkit
+library(ggpubr)
+
+# +
+# ===================== Repeat/R-specific package ============================ #
+# rptR: Repeatability Estimation for Gaussian and Non-Gaussian data
+# Martin A. Stoffel, Shinichi Nakagawa, & Holger Schielzeth
+#                   |______________________________________|
+#                                      |
+#                                      |
+#                   2010.Repeatability for Gaussian and non-Gaussian data: a 
+#                   practical guide for biologist.Biological Reviews.85.935-956.
+
+# install.packages("rptR")
+library(rptR)                 # individual repeatability 
+
+?rptR
+# pretty slim documentation... more information and examples available at:
+# https://cran.r-project.org/web/packages/rptR/vignettes/rptR.html 
+# ============================================================================ #
+# -
 
 
 ## === Read data (.csv) check structure
@@ -61,15 +108,17 @@ trout$tag.month <- recode(trout$tag.month, "03"="Spring","04"="Spring","05"="Spr
 Spring <- subset(trout, trout$tag.month == "Spring")
 Fall <- trout[(trout$tag.month == "Fall"), ]
 
-## === FOR SPRING-TAGGED FISH
+## === FOR SPRING-TAGGED FISH ===
 # summarize data by season and life stage
-sum.table1 <- describeBy(Spring$Length, list(Spring$tag.year,Spring$Lifestage_at_tagging), 
+sum.table.sp <- describeBy(Spring$Length, list(Spring$tag.year,Spring$Lifestage_at_tagging), 
                          mat=TRUE, digits=2)
 
-## === FOR FALL-TAGGED FISH
-sum.table.f <- describeBy(Fall$Length, list(Fall$tag.year, Fall$Lifestage_at_tagging), 
+## === FOR FALL-TAGGED FISH ===
+sum.table.fa <- describeBy(Fall$Length, list(Fall$tag.year, Fall$Lifestage_at_tagging), 
                          mat = TRUE, digits = 2)
 
+# compare summary tables to table 1
+sum.table.sp; sum.table.fa
 
 
 #+#########################+#
@@ -86,6 +135,7 @@ for (i in columns)trout[,i] <- lubridate::yday(as.Date(trout[,i], format = '%m/%
 
 #check structure
 str(trout)
+attach(trout)
 
 
 #+#########################################+#
@@ -130,29 +180,48 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
      }
 }}
 
-# graphing commands
-a <- {ggplot(data = trout, aes(x = First.entry, y = Second.entry))+
-     geom_point()+
-     geom_abline(slope = 1)+
-     scale_y_continuous(limits = c(145,350))+
-     scale_x_continuous(limits = c(145,350))+
-     labs(x = "River entry season 1", y = "River entry season 2")+ 
-     theme_bw()}
-b <- {ggplot(data = trout, aes(x = Second.entry, y = Third.entry))+
-     geom_point()+
-     geom_abline(slope = 1)+
-     scale_y_continuous(limits = c(145,350))+
-     scale_x_continuous(limits = c(145,350))+
-     labs(x = "River entry season 2", y = "River entry season 3")+ 
-     theme_bw()}
-c <- {ggplot(data = trout, aes(x = First.entry, y = Third.entry))+
-     geom_point()+
-     geom_abline(slope = 1)+
-     scale_y_continuous(limits = c(145,350))+
-     scale_x_continuous(limits = c(145,350))+
-     labs(x = "River entry season 1", y = "River entry season 3")+ 
-     theme_bw()}
+# + 
+# create general graphing function
+Base.p <- function (df, x, y, labx, laby){
+
+     # Input Description:
+     #    df: data frame name
+     #    x: column name from df to be plotted on x-axis
+     #    y: column name from df to be plotted on y-axis
+     #    labx: name/description of data on x-axis
+     #    laby: name/description of data on y-axis
+     
+     require(ggplot2)    # package required to output plot
+     
+     plot <- ggplot(data = df, aes(x = x, y = y)) +
+          geom_point() +
+          geom_abline(slope = 1) +
+          scale_y_continuous(limits = c(145,350)) +
+          scale_x_continuous(limits = c(145,350)) +
+          labs(x = paste0("River entry season ", labx), 
+               y = paste0("River entry season ", laby)) +
+          theme_bw()
+     
+     return(plot)
+}
+# -
+
+# call on graphing function
+a <- Base.p(trout, First.entry, Second.entry, 1, 2)
+b <- Base.p(trout, Second.entry, Third.entry, 2, 3)
+c <- Base.p(trout, First.entry, Third.entry, 1, 3)
+
+# combine plots
 multiplot(a,b,c, cols = 3)
+
+## === NOTE WARNINGS:
+# Warnings are generated from incomplete elements within the data frame.
+# Not all fish were recaptured/detected in subsequent years.
+
+
+#+#########################################+#
+## ===== Calculate Repeated Behavior ===== ##
+#-#########################################-#
 
 
 #+#########################################+#
@@ -209,3 +278,15 @@ R
 
 Repeatability (R) = (MSA - MSW)/(MSA + (n0 - 1) * MSW)
 n0 = 
+
+
+
+
+
+# === Code Ends Here === #
+# -
+
+
+# Citations:
+# Sokal, R.R., & F. J. Rohlf. 1981. Biometry. San Francisco, W.H. Freeman and Co.
+
