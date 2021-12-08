@@ -163,7 +163,7 @@ library(rptR)                           # individual repeatability
 
 
 ## === Read data (.csv) check structure
-trout <- read.csv("SeaTrout_migration_repeatability.csv", header = TRUE)
+trout <- read.csv("trout_repeatability.csv", header = TRUE)
 str(trout)                              #401 obs. of 19 variables
 
 
