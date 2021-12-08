@@ -1,4 +1,4 @@
- Survey of Indiviudal Repeatability
+ Survey of Indiviudal Repeatability,
  FNR 647 - Quantitative Methods in Ecology
  Final Project (12/9/2021)
  Author: Spencer T. Gardner
