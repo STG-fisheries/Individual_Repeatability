@@ -1,0 +1,515 @@
+##=################################################=##
+##                                                  ##
+##       Examples in Individual Repeatability       ##
+##       FNR647 - Quantitative Methods              ##
+##              Spencer T. Gardner                  ##
+##                  11/5/2021                       ##
+##                                                  ##
+##=################################################=##
+
+# +
+# ===========================  Modeling Components =========================== #
+# Individual Repeatability (R): proportion of observed variance that results from 
+# among-individual differences. This is analogous to finding the intraclass correlation 
+# coefficient as defined by Sokal and Rohlf, 1981.
+#
+# R can be low for two reasons: (1) High within-individual variation, or (2) low
+#    between-individual variation. IF between-individual variation is absent, no
+#    common measure of repeatability can be estimated.
+#
+# Types of repeatability (Nakagawa & Schielzeth 2010):
+#    (1) Simple -or- Agreement Repeatability : sense of agreement among measurements
+#         calculated from the ratio of between-group variance relative to total
+#         variance.
+#    (2) Adjusted Repeatability : confounding effects are controlled for statistically
+#         prior to its calculation.
+#    (3) Consistency Repeatability : control for differences in mean and variance 
+#         between sampling events that arise from measurement inconsistency.
+#
+# Here we focus on simple repeatability. Individuals are their own independent group
+# with each group having multiple recorded measurements of a specific event. 
+
+
+## ====== Analysis w/ Gaussian Distribution ====== ##
+#+###################+#
+## ===== R_anova ====== 
+## Lessells & Boag 1987
+#-###################-#
+
+# R_anova ==   ratio of among-individual variance to total variance. When R is eq 
+#              to zero(0), all individuals show identical mean responses (i.e., no 
+#              variation among individuals). When R is eq to one(1), all individuals
+#              display perfect repeatability across multiple events.
+
+# Equation 1:        R_anova <- (MSa - MSw)/(MSa + (n_0 - 1) * MSw)
+
+# where,
+# MSa = mean between-individual sum of squares  
+# MSw = mean within-individual (residual) sum of squares
+# n_0 ==  sample size per individual if sample sizes are equal among groups (e.g.,
+#         10 inds. w/ 3 repeated measurements for each ind., then n_0 = 3)
+
+#    Defn:     Correction to variance estimate based on sample size. Tendency to 
+#              overestimate variance when you compare variance among smaller groups 
+#              to larger groups.
+
+# Equation 2:       n_0 <- (1/((k)-1))*(N - ((sum(ni^2))/N))
+
+# Uses F-table of an ANOVA with individual identities treated as factorial predictors
+
+# where,
+# k = no. of groups
+# N = total sample size
+# ni = sample size for the ith individual
+
+
+# Equation 3:
+#         SE_R_anova <- sqrt((2*(N-1)*((1-R_anova)^2)*(1+(n_0-1)*R_anova]^2))/
+#                             ((n_0^2)*(N-k)*(k-1)))
+
+# Equation 4:       CI_R_anova <- [R_anova - t_df * SE_R_anova,
+#                                  R_anova + t_df * SE_R_anova]
+
+# where,
+# t_df is the degrees of freedom for the t value
+# when k > 100 and alpha is set to 0.05, t_df can be approximated to 1.96
+
+
+#+################+#
+## ===== R_lmm ===== 
+#-################-#
+
+# R_lmm ==     simplest approach, using restricted maximum likelihood (REML) for 
+#              estimating unbiased variance. REML does not use the full set of 
+#              observations available in the data set. Instead, REML uses a like-
+#              lihood function.Fit the linear mixed-effects model as:
+#                   y_ij = ß_0 + α_i + ε_ij
+#                   α_i ~ Gaussian(0, σ^2_α)
+#                   ε_ij ~ Gaussian(0, σ^2_ε)
+
+# Equation 5:       R_lmm <- (σ^2_α)/(σ^2_α + σ^2_ε)
+
+# σ^2_α = variance attributed to the random individual-effect
+# σ^2_ε = variance attributed to the random error term
+
+
+#+################+#
+## ===== rptR ===== 
+#-################-#
+
+# * Package utilizes the lmer formula framework discussed above for calculating
+# repeatability given either Gaussian or non-Gaussian data. 
+
+# Equation 6:
+#    rpt(Response ~ Treatment + (1 | Indiviudal), grname = "Individual", data = df, 
+#         datatype = "...", nboot = 1000, npermut = 0, adjusted = FALSE)
+
+# adjust = FALSE == fixed effects variance accounted for in linear predictor
+
+# rptGaussian = normally distributed data
+#         datatype = "Gaussian"
+
+## ====== Analysis w/ non-Gaussian Distribution ====== ##
+# rptBinary = binary (0/1)
+#         datatype = "Binary"
+# rptProportion = proportion data (i.e., vector/matrix of successses and failures)
+#         datatype = "Proportion"
+# rptPoissson = count data (*use original scale approximation*)
+#         datatype = "Poisson"
+#         log-link = ln(1/lambda + 1)
+#    ** log-link approximation becomes increasingly inaccurate at low lambda
+
+# * NOTE: the rptR lmer framework means that this package can incorporate any 
+# combination of LMM or GLMM statistical analysis (e.g., random-slope models, 
+# alternative link function, etc.)
+
+# ============================================================================ #
+# -
+
+
+# +
+# === Code Starts Here === ## 
+
+rm(list = ls(all.names = TRUE))         # clear all objects from R
+
+getwd()                                 # ensure correct path to working directory 
+
+## === Install.packages ===
+library(tidyverse)
+library(ggplot2)
+library(lme4)                           # fit LMM and GLMM 
+library(MuMIn)                          # marginal and conditional R2
+library(DHARMa)                         # diagnostic checks
+library(psych)                          # describeBy table toolkit
+
+
+# +
+# ===================== Repeat/R-specific package ============================ #
+# rptR: Repeatability Estimation for Gaussian and Non-Gaussian data
+# Martin A. Stoffel, Shinichi Nakagawa, & Holger Schielzeth
+#                   |______________________________________|
+#                                      |
+#                   2010.Repeatability for Gaussian and non-Gaussian data: a 
+#                   practical guide for biologist.Biological Reviews.85.935-956.
+
+# install.packages("rptR")
+library(rptR)                           # individual repeatability 
+
+?rptR
+# pretty slim documentation... more information and examples available at:
+# https://cran.r-project.org/web/packages/rptR/vignettes/rptR.html 
+# ============================================================================ #
+# -
+
+
+## === Read data (.csv) check structure
+trout <- read.csv("SeaTrout_migration_repeatability.csv", header = TRUE)
+str(trout)                              #401 obs. of 19 variables
+
+
+#+############################+#
+## ===== Summarize Data ======== 
+#-############################-#
+
+# isolate tag year
+trout$tag.year <- format(as.Date(trout$Date_tagged, format = "%m/%d/%Y"), "%Y")
+
+# isolate tag month and identify season
+trout$tag.month <- format(as.Date(trout$Date_tagged, format = "%m/%d/%Y"), "%m")
+
+unique(trout$tag.month)                 # reclassify as:
+                                        #   Spring("03" "04" "05" "06")
+                                        #   Fall("11" "12" "09" "10")
+
+# recode: tag month --> season
+trout$tag.month <- recode(trout$tag.month, "03"="Spring","04"="Spring","05"="Spring",
+                      "06"="Spring","09"="Fall","10"="Fall","11"="Fall","12"="Fall")
+
+# for simplicity separate data by season
+Spring <- subset(trout, trout$tag.month == "Spring")
+Fall <- trout[(trout$tag.month == "Fall"), ]
+
+## === FOR SPRING-TAGGED FISH ===
+# summarize data by season and life stage
+sum.table.sp <- describeBy(Spring$Length, list(Spring$tag.year,Spring$Lifestage_at_tagging), 
+                         mat=TRUE, digits=2)
+
+## === FOR FALL-TAGGED FISH ===
+sum.table.fa <- describeBy(Fall$Length, list(Fall$tag.year, Fall$Lifestage_at_tagging), 
+                         mat = TRUE, digits = 2)
+
+# compare summary tables to table 1
+sum.table.sp; sum.table.fa
+
+
+#+#########################+#
+## ===== Format Date ========
+#-#########################-#
+
+# convert: chr(date) --> num(d.o.y)     # str(trout)
+# select columns to be formatted
+columns <- c("Date_tagged","First.exit","First.entry","First.recap","Second.exit",
+             "Second.entry","Second.recap", "Third.exit","Third.entry","Third.recap")
+
+# convert date to day of year
+for (i in columns)trout[,i] <- lubridate::yday(as.Date(trout[,i], format = '%m/%d/%Y'))
+
+# confirm structure change
+str(trout)
+attach(trout)
+
+
+#+#########################################+#
+## ===== Visualize Repeated Behavior ===== 
+#-#########################################-#
+
+# run below function to display multiple plots as one
+RUN.FIRST <- {# source: Cookbook for R (http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/)
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+     library(grid)
+     
+     # Make a list from the ... arguments and plotlist
+     plots <- c(list(...), plotlist)
+     
+     numPlots = length(plots)
+     
+     # If layout is NULL, then use 'cols' to determine layout
+     if (is.null(layout)) {
+          # Make the panel
+          # ncol: Number of columns of plots
+          # nrow: Number of rows needed, calculated from # of cols
+          layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                           ncol = cols, nrow = ceiling(numPlots/cols))
+     }
+     
+     if (numPlots==1) {
+          print(plots[[1]])
+          
+     } else {
+          # Set up the page
+          grid.newpage()
+          pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+          
+          # Make each plot, in the correct location
+          for (i in 1:numPlots) {
+               # Get the i,j matrix positions of the regions that contain this subplot
+               matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+               
+               print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                               layout.pos.col = matchidx$col))
+          }
+     }
+}}
+
+# + 
+# create general graphing function
+Base.p <- function (df, x, y, labx, laby){
+
+     # Input Description:
+     #    df: data frame name
+     #    x: column name from df to be plotted on x-axis
+     #    y: column name from df to be plotted on y-axis
+     #    labx: name/description of data on x-axis
+     #    laby: name/description of data on y-axis
+     
+     require(ggplot2)    # package required to output plot
+
+     plot <- ggplot(data =  df, aes(x = x, y = y)) +
+          geom_point(na.rm = TRUE) +
+          geom_abline(slope = 1) +
+          scale_y_continuous(limits = c(145,350)) +
+          scale_x_continuous(limits = c(145,350)) +
+          labs(x = paste0("River entry season ", labx), 
+               y = paste0("River entry season ", laby)) +
+          theme_bw()
+     
+     return(plot)
+}
+# -
+
+# call on graphing function
+a <- Base.p(trout, First.entry, Second.entry, 1, 2)
+b <- Base.p(trout, Second.entry, Third.entry, 2, 3)
+c <- Base.p(trout, First.entry, Third.entry, 1, 3)
+
+# combine plots - save if necessary
+#jpeg("final_figure1.jpg", width = 625, height = 625, res = 100)
+multiplot(a,b,c, cols = 3)
+#dev.off()
+
+
+#+#########################################+#
+## ===== Calculate Repeated Behavior ===== 
+#-#########################################-#
+
+#    Given the analysis description by Birnie-Gauvin et al. 2021. --> "obtained 
+# two separate repeatability estimates based on data for individuals with data 
+# points for two or three subsequent spawning seasons". For simplicity, here we 
+# focus on only individuals with 3 subsequent spawning season (i.e., looking at a
+# balanced analysis).
+
+# reduce data frame to only include individuals w/ complete record
+interest.all3 <- trout[,c(1,6,11,16,21)]
+     str(interest.all3)                      # 401 obs. of 5 variables
+
+comp.record <- interest.all3[complete.cases(interest.all3),]
+     str(comp.record)                        # 35 obs. of 5 variables
+     # *Note that sample size differs slightly! 35 vs 36 -- unsure as to why. 
+
+record <- cbind(comp.record[c(1,5)], stack(comp.record[2:4])) 
+     # *Warning message negligible
+
+# convert unique identifier to factor variable
+     # why? - because each individual is a categorically independent variable
+record$id <- as.factor(record$id)
+record$tag.month <- as.factor(record$tag.month)
+
+
+#+######################################+#
+## ===== ANOVA-based Repeatabilities ===== 
+#-######################################-#
+
+# one-way ANOVA: timing of river entry statistically different from zero
+
+# remember...  we're interested in the variability generated between individuals
+#              and within each individuals repeated return to the river. 
+model = aov(values ~ id, data = record)
+
+summary(model)
+#              Df  Sum Sq Mean Sq  F value  Pr(>F)   
+# id           34  317218   9330   3.945    0.000000603 ***
+# Residuals    70  165542   2365          
+
+
+# assign parameters to correct for sample size
+k <- length(comp.record$id)             # no. of groups/individuals --> before stack
+N = length(record$id)                   # total no. of observations --> after stack
+ni = 35*(3^2)                           # sum of sample 
+     
+     # samples per individual are equal
+     n_0 = 3                            # therefore, n_0 = k 
+     MSa = 9330
+     MSw = 2365
+
+# we can use n_0 since samples are equal, or we can use the below formula... either
+# way, the result should be the same... n_0 = 3
+n_0 <- (1/((k)-1))*(N - (ni/N))         # verify...
+n_0
+
+# calculate repeatability
+R_anova <- (MSa - MSw)/(MSa + (n_0 - 1) * MSw)
+R_anova
+     # 0.495377 --> comparison between estimates provided below
+
+# calculate standard error
+SE_R_anova <- sqrt((2*(N-1)*((1-R_anova)^2)*((1+(n_0-1)*R_anova)^2))/((n_0^2)*(N-k)*(k-1)))
+SE_R_anova
+     # 0.09899348
+
+# calculate 95% confidence interval
+alpha = 0.05
+t_df = qt(1-alpha/2, 35-1)
+
+lower_CI <- (R_anova - t_df * SE_R_anova)
+upper_CI <- (R_anova + t_df * SE_R_anova)
+lower_CI;upper_CI
+     # 0.294198
+     # 0.696556
+
+
+#+###################################+#
+## ===== LMM-based Repeatability  ===== 
+#-###################################-#
+
+# intercept only model with individual as random effect
+model_lmm <- lmer(values ~ 1 + (1|id), data = record, REML = TRUE) 
+summary(model_lmm)
+
+VAR_ind = 2322
+VAR_error = 2365
+
+R_lmm <- (VAR_ind)/(VAR_ind + VAR_error)
+R_lmm
+     # 0.4954128
+
+
+# === model diagnostics ===
+# examine random effects model assumptions (normally distributed)
+plotConventionalResiduals(model_lmm)    # DHARMa for conventional residual plots
+outb <- simulateResiduals(model_lmm)
+testResiduals(outb)
+testQuantiles(outb)
+
+# specifically check random effects portion (assumes normal distribution)
+RE <- coef(model_lmm)$id[,1] - fixef(model_lmm)[1]
+shapiro.test(scale(RE))  
+     # p = 0.01 --> Random effect is not normally distributed
+
+
+## CLEAR BIMODALITY OF RESIDUALS
+# separate data by season in which they were tagged...
+# fish were tagged as they exited the river, are those individuals more spontaneous?
+Spring.rec <- subset(record, record$tag.month == "Spring")
+Fall.rec <- record[(record$tag.month == "Fall"), ]
+
+## === FOR SPRING-TAGGED FISH ===
+spring_lmm <- lmer(values ~ 1 + (1|id), data = Spring.rec, REML = TRUE) 
+summary(spring_lmm)
+
+VAR_ind.s = 2066
+VAR_error.s = 2710
+
+R_lmm.SPRING <- (VAR_ind.s)/(VAR_ind.s + VAR_error.s)
+R_lmm.SPRING
+# 0.4325796
+
+## === FOR FALL-TAGGED FISH ===
+fall_lmm <- lmer(values ~ 1 + (1|id), data = Fall.rec, REML = TRUE) 
+summary(fall_lmm)
+
+VAR_ind.f = 2328.0
+VAR_error.f = 694.9
+
+R_lmm.FALL <- (VAR_ind.f)/(VAR_ind.f + VAR_error.f)
+R_lmm.FALL
+# 0.7701214
+
+
+#+#############################+#
+## ===== rptR Package - LMM ===== 
+#-#############################-#
+
+# Timing of River Entry repeatability for k = 3
+R_rpt_lmm <- rpt(values ~ 1 + (1|id), grname = "id", data = record, datatype = "Gaussian",
+             nboot = 500, npermut = 0, adjusted = FALSE)
+     
+summary(R_rpt_lmm)
+     # 0.495
+
+#jpeg("FNR647_final1.jpg", width = 625, height = 625, res = 100)
+plot(R_rpt_lmm, type = "boot", grname = "id", cex.main = 0.8)
+#dev.off()
+
+#+###########################################+#
+# Birnie-Gauvin et al. 2021 vs. Replicated 
+#         Timing of river entry
+#    k=3      R    CI             N    p
+#B-G2021    0.503  0.267-0.668    36   <0.0001    *note difference in sample size
+#  anova    0.495  0.294-0.697    35   <0.0001
+#    lmm    0.495
+#   rptR    0.495  0.269-0.665    35   <0.0001
+#-###########################################-#
+
+
+
+#+##############################+#
+## ===== rptR Package - GLMM ===== 
+#-##############################-#
+
+# It is possible and common to incorporate fixed effects into estimations of 
+# repeatability. To demonstrate this we'll use a rptR demonstration data set, to 
+# analyze the number of eggs laid by female beetles. In the example, we control 
+# for excess variation in number of eggs that is introduced into the analysis by 
+# a nutritional treatment.
+
+# call in rptR dataset BeetlesFemale
+data("BeetlesFemale")
+str(BeetlesFemale)                        # 480 obs. of 6 variables
+
+# visualize distribution
+hist(BeetlesFemale$Egg, nclass = max(BeetlesFemale$Egg))
+
+# formula = (response ~ fixed effect + (1|random effect))
+R_rpt_glmm <- rpt(Egg ~ Treatment + (1 | Population), grname = c("Population","Fixed"), 
+                  data = BeetlesFemale, datatype = "Poisson", nboot = 500, 
+                  npermut = 0, adjusted = FALSE)
+     # adjusted = FALSe == fixed effects variance accounted for in linear predictor
+summary(R_rpt_glmm)      # w/ "Poisson" original scale approximation is exact solution
+     # R_random = 0.447
+     # R_fixed = 0.08    --> marginal R^2
+     # Total = 0.527     --> condition R^2
+
+#jpeg("FNR647_final2.jpg", width = 625, height = 625, res = 100)
+plot(R_rpt_glmm, grname = "Population", scale = "original", cex.main = 0.8)
+#dev.off()
+
+
+# === Code Ends Here === #
+# -
+
+
+# ==== Citations:
+
+# Birnie-Gauvin, K., A. Koed, and K. Aarestrup. 2021. Repeatability of migratory 
+#    behavior suggests trade-off between size and survival in a wild iteroparous 
+#    salmonid. Functional Ecology. 00:1-11.
+# Lessells, C.M., & P. T. Boag. 1987. Unrepeated repeatabilities: a common mistake.
+#    Auk. 104:116-121.
+# Nakagawa, S., and H. Schielzeth. 2010. Repeatability for Gaussian and non-
+#    Gaussian data: a practical guide for biologists. Biological Reviews. 85:935-956.
+# Sokal, R.R., & F. J. Rohlf. 1981. Biometry. San Francisco, W.H. Freeman and Co.
+
+
+# ==== Software Citation:
+citation("rptR")
+
