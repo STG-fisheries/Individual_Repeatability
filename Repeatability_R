@@ -139,7 +139,6 @@ library(tidyverse)
 library(ggplot2)
 library(lme4)                           # fit LMM and GLMM 
 library(MuMIn)                          # marginal and conditional R2
-library(DHARMa)                         # diagnostic checks
 library(psych)                          # describeBy table toolkit
 
 
@@ -408,21 +407,6 @@ R_lmm <- (VAR_ind)/(VAR_ind + VAR_error)
 R_lmm
      # 0.4954128
 
-
-# === model diagnostics ===
-# examine random effects model assumptions (normally distributed)
-plotConventionalResiduals(model_lmm)    # DHARMa for conventional residual plots
-outb <- simulateResiduals(model_lmm)
-testResiduals(outb)
-testQuantiles(outb)
-
-# specifically check random effects portion (assumes normal distribution)
-RE <- coef(model_lmm)$id[,1] - fixef(model_lmm)[1]
-shapiro.test(scale(RE))  
-     # p = 0.01 --> Random effect is not normally distributed
-
-
-## CLEAR BIMODALITY OF RESIDUALS
 # separate data by season in which they were tagged...
 # fish were tagged as they exited the river, are those individuals more spontaneous?
 Spring.rec <- subset(record, record$tag.month == "Spring")
