@@ -21,8 +21,8 @@
 #    (1) Simple -or- Agreement Repeatability : sense of agreement among measurements
 #         calculated from the ratio of between-group variance relative to total
 #         variance.
-#    (2) Adjusted Repeatability : confounding effects are controlled for statistically
-#         prior to its calculation.
+#    (2) Adjusted -or- Conditional Repeatability : confounding effects are controlled 
+#         for statistically by the modeler.
 #    (3) Consistency Repeatability : control for differences in mean and variance 
 #         between sampling events that arise from measurement inconsistency.
 #
@@ -158,6 +158,22 @@ library(rptR)                           # individual repeatability
 ?rptR
 # pretty slim documentation... more information and examples available at:
 # https://cran.r-project.org/web/packages/rptR/vignettes/rptR.html 
+
+
+
+# ICC: Facilitating Estimation of the Intraclass Correlation Coefficient
+# Matthew E. Wolak, Daphne J. Fairbairn, and Yale R. Paulsen
+
+# install.packages("ICC")
+library(ICC)                            # intraclass correlation in psych
+
+?ICC
+# although we do not use the ICC package here, ICC is a extremely useful tool in 
+# planning experimental designs. One primary benefit of the package is its ability
+# to run a power analysis for estimating sampling effort (i.e., no. of individuals
+# by no. of measurements). 
+# more information and examples available at:
+# https://cran.r-project.org/web/packages/ICC/ICC.pdf 
 # ============================================================================ #
 # -
 
