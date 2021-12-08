@@ -1,0 +1,37 @@
+#+#############################+#
+# === Citations of Interest === #
+#-#############################-#
+
+
+Bell, A. M., S. J. Hankison, and K. L. Laskowski. 2009. The repeatability of behaviour: a meta-	analysis. Animal
+  Behaviour. 77:771-783.
+  
+Birnie-Gauvin, K., A. Koed, and K. Aarestrup. 2021. Repeatability of migratory behavior suggests trade-off between 
+  size and survival in a wild iteroparous salmonid. Functional Ecology. 00:1-11.
+  
+Harper, D. G. C. 1994. Some comments on the repeatability of measurements. Ringing and 	Migration. 15:84-90.
+
+Lessells, C. M., and P. T. Boag. 1987. Unrepeatable repeatabilities: a common mistake. The 	Auk. 104:116-121.
+
+Nakagawa, S., and H. Schielzeth. 2010. Repeatability for Gaussian and non-Gaussian data: a 	practical guide for 
+  biologists. Biological Reviews. 85:935-956.
+  
+Sokal, R.R., & F. J. Rohlf. 1981. Biometry. San Francisco, W.H. Freeman and Co.
+
+Wilson, A. J. 2018. How should we interpret estimates of individual repeatability? Evolution 	Letters 2:4-8.
+
+Wolak, M. E., D. J. Fairbairn, and Y. R. Paulsen. 2012. Guidelines for estimating repeatability. Methods in Ecology 
+  and Evolution. 3:129-137.
+
+
+#==================================================================================================================
+Statistical Software of Interest:
+In R:			install.packages(“rptR”)
+          library(rptR)
+          citation(“rptR”)
+
+Citation:
+Stoffel, M. A., Nakagawa, S. and Schielzeth, H. (2017), rptR: repeatability estimation and 	variance decomposition 
+  by generalized linear mixed-effects models. Methods Ecol Evol, 	8: 1639-1644. doi:10.1111/2041-210X.12797
+#==================================================================================================================
+
