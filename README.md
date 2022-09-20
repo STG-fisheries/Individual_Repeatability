@@ -5,7 +5,7 @@
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
-<h3 align="center">project_title</h3>
+<h3 align="center">Survey of Indiviudal Repeatability</h3>
 
   <p align="center">
     project_description
@@ -21,7 +21,7 @@
   </p>
 </div>
 
- ### Survey of Indiviudal Repeatability
+ Survey of Indiviudal Repeatability
  FNR 647 - Quantitative Methods in Ecology
  Final Project (12/9/2021)
  Author: Spencer T. Gardner
