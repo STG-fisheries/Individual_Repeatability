@@ -5,9 +5,9 @@
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
-<h3 align="left">Survey of Indiviudal Repeatability</h3>
+<h3 align="center">Survey of Indiviudal Repeatability</h3>
 
-  <p align="left">
+  <p align="center">
     Author: Spencer T. Gardner
     Date:   12/19/2021
     
