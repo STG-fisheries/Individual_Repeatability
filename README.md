@@ -8,7 +8,16 @@
 <h3 align="center">Survey of Indiviudal Repeatability</h3>
 
   <p align="center">
-    project_description
+    Author: Spencer T. Gardner
+    Date:   12/19/2021
+    
+    Position: 
+       Ph.D student 
+       Fisheries and Aquatic Science
+    
+    Location: 
+       Dept. of Forestry and Natural Resources
+       Purdue University - West Lafayette, IN
     <br />
     <a href="https://github.com/github_username/repo_name"><strong>Explore the docs »</strong></a>
     <br />
@@ -19,18 +28,7 @@
     ·
     <a href="https://github.com/github_username/repo_name/issues">Request Feature</a>
   </p>
-</div>
-
- Survey of Indiviudal Repeatability
- FNR 647 - Quantitative Methods in Ecology
- Final Project (12/9/2021)
- Author: Spencer T. Gardner
- Position: 
-       Ph.D student 
-       Fisheries and Aquatic Science
- Location: 
-       Dept. of Forestry and Natural Resources
-       Purdue University - West Lafayette, IN
+</div
 
 
 
